@@ -6,6 +6,6 @@ export const routes: Routes = [
     { path: 'authors', loadComponent: () => import('./author/author-list/author-list.component').then(m => m.AuthorListComponent)},
     { path: 'games', loadComponent: () => import('./game/game-list/game-list.component').then(m => m.GameListComponent)},
     { path: 'clientes', loadComponent: () => import('./cliente/cliente-list/cliente-list.component').then(m => m.ClienteListComponent)},
-    { path: 'prestamo', loadComponent: () => import('./prestamo/prestamo-list/prestamo-list.component').then(m => m.PrestamoListComponent)}
+    { path: 'prestamo', loadComponent: () => import('./prestamo/prestamo-list/prestamo-list.component').then(m => m.PrestamosListComponent)}
     
 ];

@@ -3,7 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { PageEvent } from '@angular/material/paginator';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { PrestamoEditComponent } from '../prestamo-edit/prestamo-edit.component';
-import { PrestamoService } from '../prestamo.service';
+import { PrestamosService } from '../prestamo.service';
 import { Prestamo } from '../model/Prestamo';
 import { Pageable } from '../../core/model/page/Pageable';
 import { DialogConfirmationComponent } from '../../core/dialog-confirmation/dialog-confirmation.component';
@@ -19,80 +19,107 @@ import { Cliente } from '../../cliente/model/Cliente';
 import { ClienteService } from '../../cliente/cliente.service';
 import { GameService } from '../../game/game.service';
 import { Game } from '../../game/model/Game';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatDatepickerModule } from '@angular/material/datepicker';
 
 
 @Component({
-    selector: 'app-prestamo-list',
+    selector: 'app-prestamos-list',
     standalone: true,
-    imports: [
-        MatButtonModule, 
-        MatIconModule, 
-        MatTableModule, 
-        CommonModule, 
-        FormsModule,
-        MatFormFieldModule,
-        MatInputModule,
-        MatSelectModule,
-        MatPaginator 
-    ],
+    imports: [MatButtonModule,
+            MatIconModule,
+            MatTableModule,
+            CommonModule,
+            FormsModule,
+            MatFormFieldModule,
+            MatInputModule,
+            MatSelectModule,
+            MatPaginator,
+            MatDatepickerModule,
+            MatNativeDateModule],
     templateUrl: './prestamo-list.component.html',
     styleUrl: './prestamo-list.component.scss',
 })
-export class PrestamoListComponent implements OnInit {
+export class PrestamosListComponent implements OnInit {
     pageNumber: number = 0;
     pageSize: number = 5;
     totalElements: number = 0;
-
     clientes: Cliente[];
     games: Game[];
-    filterGame: Game;
-    filterCliente: Cliente;
-    filterTitle: string;
-    filterName: string;    
+    prestamos: Prestamo[];
+    filterClientes: Cliente;
+    filterGames: Game;
+    filterDate: Date;
 
     dataSource = new MatTableDataSource<Prestamo>();
     displayedColumns: string[] = ['id', 'gamename', 'clientname', 'fechaprestamo', 'fechadevolucion', 'action'];
 
     constructor(
-        private prestamoService: PrestamoService, 
-        private gameService: GameService,
-        private clienteService: ClienteService,
-        public dialog: MatDialog) {}
+      private prestamosService: PrestamosService,
+      private clienteService: ClienteService,
+      private gameService: GameService,
+      public dialog: MatDialog
+    ) {}
 
     ngOnInit(): void {
-        this.loadPage();
+      const pageable: Pageable = {
+        pageNumber: this.pageNumber,
+        pageSize: this.pageSize,
+        sort: [
+            {
+                property: 'id',
+                direction: 'ASC',
+            },
+        ],
+      };
+      this.prestamosService.getPrestamos(pageable)
+      .subscribe((data) => {
+        this.dataSource.data = data.content;
+        this.pageNumber = data.pageable.pageNumber;
+        this.pageSize = data.pageable.pageSize;
+        this.totalElements = data.totalElements;
+      });
 
-        this.gameService.getGames().subscribe((games) => (this.games = games));
+      this.clienteService
+          .getClientes()
+          .subscribe((clientes) => (this.clientes = clientes));
 
-        this.clienteService.getClientes().subscribe((clientes) => (this.clientes =clientes));
-
+      this.gameService
+          .getGames()
+          .subscribe((games) => (this.games = games));
     }
 
     onCleanFilter(): void {
-        this.filterTitle = null;
-        this.filterGame = null;
-        this.filterName = null;
-        this.filterCliente = null;
+        this.filterClientes = null;
+        this.filterGames = null;
+        this.filterDate = null;
         this.onSearch();
     }
 
     onSearch(): void {
-        const title = this.filterTitle;
-        const name = this.filterName;
-       
-        const clienteId =
-        this.filterCliente != null ? this.filterCliente.id : null;
+        console.log("list")
+        const pageable: Pageable = {
+              pageNumber: this.pageNumber,
+              pageSize: this.pageSize,
+              sort: [
+                  {
+                      property: 'id',
+                      direction: 'ASC',
+                  },
+              ],
+          };
 
-        const gameId =
-            this.filterGame != null ? this.filterGame.id : null;
+        const clientesName = this.filterClientes != null ? this.filterClientes.name : null;
+        const gameName = this.filterGames != null ? this.filterGames.title : null;
+        const date = this.filterDate;
 
-        this.gameService
-            .getGames(title, gameId)
-            .subscribe((games) => (this.games = games));
-
-        this.clienteService
-            .getClientes(name, clienteId)
-            .subscribe((cliente) => (this.clientes = cliente));
+        this.prestamosService.getPrestamos(pageable, gameName, clientesName, date)
+        .subscribe((data) => {
+            this.dataSource.data = data.content;
+            this.pageNumber = data.pageable.pageNumber;
+            this.pageSize = data.pageable.pageSize;
+            this.totalElements = data.totalElements;
+        });
     }
 
     loadPage(event?: PageEvent) {
@@ -112,7 +139,11 @@ export class PrestamoListComponent implements OnInit {
             pageable.pageNumber = event.pageIndex;
         }
 
-        this.prestamoService.getPrestamos(pageable).subscribe((data) => {
+        const clientesName = this.filterClientes != null ? this.filterClientes.name : null;
+        const gameName = this.filterGames != null ? this.filterGames.title : null;
+        const date = this.filterDate;
+
+        this.prestamosService.getPrestamos(pageable, gameName, clientesName, date).subscribe((data) => {
             this.dataSource.data = data.content;
             this.pageNumber = data.pageable.pageNumber;
             this.pageSize = data.pageable.pageSize;
@@ -120,7 +151,7 @@ export class PrestamoListComponent implements OnInit {
         });
     }
 
-    createPrestamo() {
+    createPrestamos() {
         const dialogRef = this.dialog.open(PrestamoEditComponent, {
             data: {},
         });
@@ -130,9 +161,9 @@ export class PrestamoListComponent implements OnInit {
         });
     }
 
-    editPrestamo(prestamo: Prestamo) {
+    editPrestamos(prestamos: Prestamo) {
         const dialogRef = this.dialog.open(PrestamoEditComponent, {
-            data: { prestamo: prestamo },
+            data: { prestamos: prestamos },
         });
 
         dialogRef.afterClosed().subscribe((result) => {
@@ -140,18 +171,18 @@ export class PrestamoListComponent implements OnInit {
         });
     }
 
-    deletePrestamo(prestamo: Prestamo) {
+    deletePrestamos(prestamos: Prestamo) {
         const dialogRef = this.dialog.open(DialogConfirmationComponent, {
             data: {
-                title: 'Eliminar autor',
+                title: 'Eliminar prestamo',
                 description:
-                    'Atención si borra el autor se perderán sus datos.<br> ¿Desea eliminar el autor?',
+                    'Atención si borra el prestamo se perderán sus datos.<br> ¿Desea eliminar el prestamo?',
             },
         });
 
         dialogRef.afterClosed().subscribe((result) => {
             if (result) {
-                this.prestamoService.deletePrestamo(prestamo.id).subscribe((result) => {
+                this.prestamosService.deletePrestamos(prestamos.id).subscribe((result) => {
                     this.ngOnInit();
                 });
             }

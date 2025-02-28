@@ -10,23 +10,44 @@ import { PRESTAMOS_DATA } from '../prestamo/model/mock-prestamos';
 @Injectable({
     providedIn: 'root',
 })
-export class PrestamoService {
+export class PrestamosService {
     constructor(private http: HttpClient) {}
 
     private baseUrl = 'http://localhost:8080/prestamo';
 
-    getPrestamos(pageable: Pageable): Observable<PrestamoPage> {
-        //return of(PRESTAMOS_DATA)
+    getPrestamos(pageable: Pageable, gamename?:string, clientname?: string, date?: Date): Observable<PrestamoPage> {
+      let params = '';
+      if (gamename != null) {
+        params += 'gameTitle=' + gamename + '&';
+      }
+      if (clientname != null) {
+          params += 'clientName=' + clientname + '&';
+      }
+      if(date != null){
+        params += 'date=' + date.toISOString();
+      }
+      console.log(date)
+
+      if(params === ''){
+        //return of(PRESTAMOS_DATA);
         return this.http.post<PrestamoPage>(this.baseUrl, { pageable: pageable });
+      }
+      else{
+        let url = this.baseUrl + '?' + params;
+        return this.http.post<PrestamoPage>(url, { pageable: pageable });
+      }
     }
 
-    savePrestamo(prestamo: Prestamo): Observable<Prestamo> {
+    savePrestamos(prestamo: Prestamo): Observable<Prestamo> {
         const { id } = prestamo;
-        const url = id ? `${this.baseUrl}/${id}` : this.baseUrl;
+        let url = id ? `${this.baseUrl}/${id}` : this.baseUrl;
+        url = url + '?';
+        url = url + 'clientname=' + prestamo.clientname + '&';
+        url = url + 'gamename=' + prestamo.gamename + '&';
         return this.http.put<Prestamo>(url, prestamo);
     }
 
-    deletePrestamo(idPrestamo: number): Observable<void> {
+    deletePrestamos(idPrestamo: number): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/${idPrestamo}`);
     }
 
@@ -34,3 +55,4 @@ export class PrestamoService {
         return this.http.get<Prestamo[]>(this.baseUrl);
     }
 }
+
